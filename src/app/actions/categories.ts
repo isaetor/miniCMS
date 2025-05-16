@@ -1,33 +1,40 @@
 'use server'
 
+import { prisma } from "@/lib/prisma";
+
 interface GetCategoriesOptions {
   popular?: boolean
   limit?: number
 }
 
 export async function getCategories(options: GetCategoriesOptions = {}) {
-  try {
-    const { popular, limit } = options
-    const queryParams = new URLSearchParams()
 
-    if (popular) queryParams.set('popular', 'true')
-    if (limit) queryParams.set('limit', limit.toString())
+  const { popular, limit } = options;
 
-    const url = `${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/categories?${queryParams.toString()}`
-
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
+  const categories = await prisma.category.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      _count: {
+        select: {
+          articles: true,
+        },
       },
+    },
+    orderBy: {
+      name: "asc",
+    },
+    ...(limit && { take: limit }),
+    ...(popular && {
+      orderBy: {
+        articles: {
+          _count: 'desc'
+        }
+      }
     })
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch categories')
-    }
+  });
 
-    return response.json()
-  } catch (error) {
-    console.error('Error fetching categories:', error)
-    return []
-  }
+  return categories;
 }

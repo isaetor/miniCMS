@@ -3,9 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { motion } from "motion/react";
-import { ArticleCardProps } from "@/types/article";
 
-const ArticleCard = ({ article, index }: ArticleCardProps) => {
+const ArticleCard = ({ article, index }) => {
   return (
     <motion.article 
       initial={{ opacity: 0, y: 50 }}

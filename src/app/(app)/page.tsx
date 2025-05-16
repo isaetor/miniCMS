@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { ChevronLeft, LayoutGrid, SearchIcon } from "lucide-react";
+import { ChevronLeft, LayoutGrid } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ArticleCard from "@/components/app/articles/ArticleCard";
 import PopularCategories from "@/components/app/home/PopularCategories";
+import SearchForm from "@/components/app/home/SearchForm";
 
 export default async function Home() {
   return (
@@ -15,10 +15,7 @@ export default async function Home() {
           <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2 md:gap-4">به<Image className="h-9 md:h-12 w-auto" src="/images/logo.svg" alt="Mini CMS" sizes="100vw" width={0} height={0} />خوش آمدید</h1>
           <p className="text-muted-foreground max-w-xl md:text-center leading-7 text-sm md:text-base">مقالیتو بستری برای خواندن، گفت‌وگو درباره‌ی موضوعات مورد علاقه و به اشتراک‌گذاری ایده‌های اصیل و عمیق در زندگی شخصی، حرفه‌ای و اجتماعی است.</p>
         </div>
-        <form className="flex gap-2 justify-center w-full max-w-md">
-          <Input type="text" className="w-full md:w-[250px]" placeholder="جستجوی در مقالیتو ..." />
-          <Button type="submit" size="icon"><SearchIcon /></Button>
-        </form>
+        <SearchForm />
       </section>
 
       <section className="flex-wrap gap-4 pt-20 hidden md:flex">

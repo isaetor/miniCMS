@@ -21,10 +21,8 @@ export default function PopularCategories() {
 
     useEffect(() => {
         const loadCategories = async () => {
-            const res = await getCategories({ popular: true, limit: 10 })
-            if (res.categories) {
-                setCategories(res.categories)
-            }
+            const categories = await getCategories({ popular: true, limit: 10 })
+            setCategories(categories)
             setLoading(false)
         }
         loadCategories()

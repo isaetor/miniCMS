@@ -3,7 +3,7 @@ import Link from 'next/link'
 interface Category {
   id: string
   name: string
-  description: string
+  description: string | null
   slug: string
   _count?: {
     articles: number
@@ -11,7 +11,7 @@ interface Category {
 }
 
 export default async function CategoriesPage() {
-  const {categories} = await getCategories()
+  const categories = await getCategories()
 
   return (
     <div className="container mx-auto p-4">
