@@ -12,10 +12,17 @@ interface Author {
 interface Article {
   id: string;
   title: string;
-  excerpt: string;
-  image: string;
+  content: string;
+  excerpt: string | null;
+  image: string | null;
   author: Author;
   createdAt: string;
+  updatedAt: string;
+  published: boolean;
+  publishedAt: string | null;
+  slug: string;
+  categoryId: string;
+  authorId: string;
 }
 
 const SecondArticleCard = ({ article }: { article: Article }) => {
@@ -23,7 +30,7 @@ const SecondArticleCard = ({ article }: { article: Article }) => {
         <article className="bg-background rounded-2xl border relative overflow-hidden">
             <Link href={`/articles/${article.id}`} className="flex flex-col md:flex-row p-2" prefetch={false}>
                 <Image
-                    src={article.image}
+                    src={article.image || "/images/default-article.jpg"}
                     alt={article.title}
                     width={300}
                     height={300}
@@ -38,7 +45,7 @@ const SecondArticleCard = ({ article }: { article: Article }) => {
                             {article.title}
                         </h2>
                         <p className="text-xs md:text-sm text-muted-foreground leading-5 line-clamp-2">
-                            {article.excerpt}
+                            {article.excerpt || article.content.substring(0, 150)}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">

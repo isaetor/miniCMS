@@ -43,6 +43,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { Check, ChevronsUpDown, FileSearch, ListFilter, Search, Tag, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCategories } from "@/app/actions/categories";
+import { getArticles } from "@/app/actions/articles";
 import SecondArticleCard from "@/components/app/articles/SecondArticleCard";
 
 interface Category {
@@ -62,12 +63,25 @@ interface Article {
   id: string;
   title: string;
   content: string;
-  excerpt: string;
-  image: string;
+  excerpt: string | null;
+  image: string | null;
   category: Category;
   author: Author;
   createdAt: string;
+  updatedAt: string;
+  published: boolean;
+  publishedAt: string | null;
+  slug: string;
+  categoryId: string;
+  authorId: string;
 }
+
+const convertDatesToStrings = (article: any): Article => ({
+  ...article,
+  createdAt: article.createdAt.toISOString(),
+  updatedAt: article.updatedAt.toISOString(),
+  publishedAt: article.publishedAt?.toISOString() || null,
+});
 
 const ArticlesPage = () => {
   const searchParams = useSearchParams();
@@ -76,11 +90,14 @@ const ArticlesPage = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [isFiltering, setIsFiltering] = useState(false);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
   const { ref, inView } = useInView({
     threshold: 0,
   });
@@ -89,32 +106,26 @@ const ArticlesPage = () => {
   const fetchArticles = async (pageNum: number) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        page: pageNum.toString(),
-        sort: sortBy,
+      const data = await getArticles({
+        page: pageNum,
+        sort: sortBy as 'newest' | 'oldest' | 'title',
+        search: searchQuery,
+        category: selectedCategory,
       });
 
-      if (searchQuery) {
-        params.append('search', searchQuery);
-      }
-
-      if (selectedCategory) {
-        params.append('category', selectedCategory);
-      }
-
-      const response = await fetch(`/api/articles?${params.toString()}`);
-      const data = await response.json();
+      const articlesWithStringDates = data.articles.map(convertDatesToStrings);
 
       if (pageNum === 1) {
-        setArticles(data.articles);
+        setArticles(articlesWithStringDates);
       } else {
-        setArticles((prev) => [...prev, ...data.articles]);
+        setArticles((prev) => [...prev, ...articlesWithStringDates]);
       }
 
       setHasMore(data.hasMore);
     } catch (error) {
       console.error("Error fetching articles:", error);
     } finally {
+      alert("done");
       setLoading(false);
       setIsFiltering(false);
     }
@@ -122,12 +133,18 @@ const ArticlesPage = () => {
 
   useEffect(() => {
     setIsFiltering(true);
-    const timeoutId = setTimeout(() => {
-      setPage(1);
-      fetchArticles(1);
-    }, 500);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    setTimeoutId(setTimeout(() => {
+      handleFilterClick("search", searchText);
+    }, 1000));
+  }, [searchText]);
 
-    return () => clearTimeout(timeoutId);
+  useEffect(() => {
+    setIsFiltering(true);
+    setPage(1);
+    fetchArticles(1);
   }, [searchQuery, selectedCategory, sortBy]);
 
   const sortOptions = [
@@ -158,12 +175,14 @@ const ArticlesPage = () => {
 
 
   const handleFilterClick = (type: string, value: string) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
+
     if (type === "clear") {
       params.delete("search");
       params.delete("category");
       params.delete("sort");
       setSearchQuery("");
+      setSearchText("");
       setSelectedCategory("");
       setSortBy("newest");
     }
@@ -174,6 +193,7 @@ const ArticlesPage = () => {
       } else {
         params.delete("search");
         setSearchQuery("");
+        setSearchText("");
       }
     }
     if (type === "category") {
@@ -342,8 +362,8 @@ const ArticlesPage = () => {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
               placeholder="جستجو در مقالات..."
-              value={searchQuery}
-              onChange={(e) => handleFilterClick("search", e.target.value)}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
               className="pl-10"
             />
           </div>
