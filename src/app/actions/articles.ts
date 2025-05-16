@@ -1,44 +1,33 @@
 "use server";
 
-import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
-
-export type GetArticlesParams = {
-  page?: number;
-  search?: string;
-  category?: string;
-  sort?: 'newest' | 'oldest' | 'title';
-  pageSize?: number;
-};
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
+import { GetArticlesParams } from "@/types/article";
 
 export async function getArticles({
   page = 1,
-  search = '',
-  category = '',
-  sort = 'newest',
-  pageSize = 12
-}: GetArticlesParams) {
+  limit = 12,
+  sort = "newest",
+  search,
+  category,
+}: GetArticlesParams = {}) {
   try {
+    const skip = (page - 1) * limit;
+
     const where: Prisma.ArticleWhereInput = {
-      AND: [
-        search
-          ? {
-              OR: [
-                { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
-                { content: { contains: search, mode: Prisma.QueryMode.insensitive } },
-              ],
-            }
-          : {},
-        category
-          ? {
-              category: {
-                slug: { equals: category, mode: Prisma.QueryMode.insensitive },
-              },
-            }
-          : {},
-      ],
+      published: true,
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { content: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        ],
+      }),
+      ...(category && {
+        category: {
+          slug: category,
+        },
+      }),
     };
 
     const [articles, total] = await Promise.all([
@@ -62,17 +51,17 @@ export async function getArticles({
           },
         },
         orderBy: {
-          ...(sort === 'newest' && { createdAt: 'desc' }),
-          ...(sort === 'oldest' && { createdAt: 'asc' }),
-          ...(sort === 'title' && { title: 'asc' }),
+          ...(sort === "newest" && { createdAt: "desc" }),
+          ...(sort === "oldest" && { createdAt: "asc" }),
+          ...(sort === "title" && { title: "asc" }),
         },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take: limit,
       }),
       prisma.article.count({ where }),
     ]);
 
-    const hasMore = total > page * pageSize;
+    const hasMore = skip + articles.length < total;
 
     return {
       articles,
@@ -80,70 +69,103 @@ export async function getArticles({
       total,
     };
   } catch (error) {
-    console.error('Error fetching articles:', error);
-    throw new Error('Failed to fetch articles');
+    console.error("Error in getArticles:", error);
+    throw new Error("Failed to fetch articles");
   }
 }
 
-export type CreateArticleParams = {
-  title: string;
-  slug: string;
-  content: string;
-  excerpt?: string;
-  image?: string;
-  categoryId: string;
-  published?: boolean;
-};
-
-export async function createArticle(data: CreateArticleParams) {
+export async function getArticle(slug: string) {
   try {
-    const session = await auth();
-    
-    if (!session?.user || !['ADMIN', 'EDITOR'].includes(session.user.role)) {
-      throw new Error('Unauthorized');
-    }
-
-    const { title, slug, content, excerpt, image, categoryId, published } = data;
-
-    if (!title || !slug || !content || !categoryId) {
-      throw new Error('Title, slug, content and category are required');
-    }
-
-    const article = await prisma.article.create({
-      data: {
-        title,
-        slug,
-        content,
-        excerpt,
-        image,
-        published,
-        publishedAt: published ? new Date() : null,
-        authorId: session.user.id,
-        categoryId
-      },
+    const article = await prisma.article.findUnique({
+      where: { slug },
       include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
         author: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
-            image: true
-          }
+            image: true,
+          },
         },
+        comments: {
+          where: { parentId: null },
+          include: {
+            author: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                image: true,
+              },
+            },
+            replies: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    image: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!article) {
+      throw new Error("Article not found");
+    }
+
+    return article;
+  } catch (error) {
+    console.error("Error fetching article:", error);
+    throw error;
+  }
+}
+
+export async function getSimilarArticles(articleId: string, categoryId: string, limit = 3) {
+  try {
+    const articles = await prisma.article.findMany({
+      where: {
+        id: { not: articleId },
+        categoryId,
+        published: true,
+      },
+      include: {
         category: {
           select: {
             id: true,
             name: true,
-            slug: true
-          }
-        }
-      }
+            slug: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            image: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
     });
 
-    revalidatePath('/articles');
-    return article;
+    return articles;
   } catch (error) {
-    console.error('Error creating article:', error);
+    console.error("Error fetching similar articles:", error);
     throw error;
   }
-} 
+}

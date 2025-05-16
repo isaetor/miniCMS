@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Nav from "./Nav";
 import { LoginLink } from "../auth/LoginLink";
+import { formatAuthorName } from "@/lib/utils";
 
 const Header = async () => {
     const session = await auth();
@@ -25,15 +26,11 @@ const Header = async () => {
                         {session && (
                             <DropdownMenu dir="rtl">
                                 <DropdownMenuTrigger>
-                                    {session.user?.image ? (
-                                        <Image className="size-10 rounded-full" src={session.user?.image} alt="Profile" width={40} height={40} />
-                                    ) : (
-                                        <div className="size-10 rounded-full bg-muted flex items-center justify-center"><UserIcon /></div>
-                                    )}
+                                    <Image className="size-10 rounded-full" src={session.user?.image ?? "/images/default-avatar.jpg"} alt="Profile" width={40} height={40} />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel className="grid flex-1 text-sm leading-tight">
-                                        <span className="truncate font-medium">{session.user?.firstName} {session.user?.lastName}</span>
+                                        <span className="truncate font-medium mb-1">{formatAuthorName(session.user?.firstName, session.user?.lastName)}</span>
                                         <span className="truncate text-xs text-muted-foreground">{session.user?.email}</span>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
@@ -87,16 +84,16 @@ const Header = async () => {
                         <Home />
                     </Link>
                     <Link href="/categories">
-                    <LayoutPanelLeft />
+                        <LayoutPanelLeft />
                     </Link>
                     <Link href="/account/notifications">
                         <BellIcon />
                     </Link>
                     {session ? (
-                    <Link href="/account">
+                        <Link href="/account">
                             <Image className="size-8 rounded-full" src={session.user?.image ?? "/images/default-avatar.jpg"} alt="Profile" width={32} height={32} />
-                        
-                    </Link>
+
+                        </Link>
                     ) : (
                         <Link href="/login">
                             <UserIcon />

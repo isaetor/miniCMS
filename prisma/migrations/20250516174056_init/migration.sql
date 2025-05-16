@@ -122,6 +122,7 @@ CREATE TABLE "Comment" (
     "content" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "isApproved" BOOLEAN NOT NULL DEFAULT false,
     "authorId" TEXT NOT NULL,
     "articleId" TEXT NOT NULL,
     "parentId" TEXT,

@@ -1,39 +1,17 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatCommentDate } from "@/lib/utils";
 import Image from "next/image";
 import { MessageSquarePlus } from "lucide-react";
 import CommentForm from "./CommentForm";
-
-interface CommentItemProps {
-    id: number;
-    userName: string;
-    content: string;
-    createdAt: string;
-    replies?: Reply[];
-    onReply: (commentId: number, content: string, parentId?: number) => void;
-    isReply?: boolean;
-    isReplying: boolean;
-    onReplyClick: (replyId: number, parentId?: number) => void;
-    replyingTo: { [key: string]: number | null };
-    parentId?: number;
-    isLoggedIn: boolean;
-}
-
-interface Reply {
-    id: number;
-    userName: string;
-    content: string;
-    createdAt: string;
-    replies?: Reply[];
-}
+import { CommentItemProps } from "@/types/comments";
 
 const CommentItem = ({ 
     id, 
-    userName, 
     content, 
     createdAt, 
+    author,
     replies = [], 
     onReply,
     isReply = false,
@@ -53,14 +31,14 @@ const CommentItem = ({
                 <div className="flex items-center gap-2">
                     <Image 
                         className="rounded-full" 
-                        src="/images/default-avatar.jpg" 
-                        alt={`${userName} کاربر`} 
+                        src={author.image || "/images/default-avatar.jpg"} 
+                        alt={`${author.firstName || author.lastName || "کاربر"} کاربر`} 
                         width={32} 
                         height={32} 
                     />
                     <div>
-                        <p className="text-sm mb-1">{userName}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(createdAt)}</p>
+                        <p className="text-sm mb-1">{author.firstName || author.lastName || "کاربر ناشناس"}</p>
+                        <p className="text-xs text-muted-foreground">{formatCommentDate(createdAt)}</p>
                     </div>
                 </div>
                 <p className="text-sm">{content}</p>
@@ -77,25 +55,28 @@ const CommentItem = ({
                         پاسخ
                     </Button>
                 )}
-                {isReplying && isLoggedIn && (
+            </div>
+            {isReplying && (
+                <div className="mr-8 md:mr-12">
                     <CommentForm
                         onSubmit={handleReply}
                         onCancel={() => onReplyClick(id, parentId)}
                         placeholder="پاسخ خود را بنویسید..."
                         submitText="ارسال پاسخ"
+                        cancelText="انصراف"
                         isReply
                     />
-                )}
-            </div>
+                </div>
+            )}
             {replies.length > 0 && (
-                <div className="grid gap-4">
+                <div className="mr-8 md:mr-12 space-y-4">
                     {replies.map((reply) => (
                         <CommentItem
                             key={reply.id}
                             {...reply}
                             onReply={onReply}
                             isReply
-                            isReplying={replyingTo[`${id}-${reply.id}`] === reply.id}
+                            isReplying={replyingTo[`${reply.id}`] === reply.id}
                             onReplyClick={onReplyClick}
                             replyingTo={replyingTo}
                             parentId={id}

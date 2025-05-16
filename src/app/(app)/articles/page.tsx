@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -40,11 +40,12 @@ import {
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Check, ChevronsUpDown, FileSearch, ListFilter, Search, Tag, X } from "lucide-react";
+import { Check, ChevronsUpDown, FileSearch, ListFilter, Loader2, Search, Tag, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCategories } from "@/app/actions/categories";
 import { getArticles } from "@/app/actions/articles";
 import SecondArticleCard from "@/components/app/articles/SecondArticleCard";
+import { Article } from "@/types/article";
 
 interface Category {
   id: string;
@@ -59,23 +60,6 @@ interface Author {
   image: string | null;
 }
 
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  excerpt: string | null;
-  image: string | null;
-  category: Category;
-  author: Author;
-  createdAt: string;
-  updatedAt: string;
-  published: boolean;
-  publishedAt: string | null;
-  slug: string;
-  categoryId: string;
-  authorId: string;
-}
-
 const convertDatesToStrings = (article: any): Article => ({
   ...article,
   createdAt: article.createdAt.toISOString(),
@@ -83,8 +67,19 @@ const convertDatesToStrings = (article: any): Article => ({
   publishedAt: article.publishedAt?.toISOString() || null,
 });
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "جدیدترین" },
+  { value: "oldest", label: "قدیمی‌ترین" },
+  { value: "title", label: "عنوان (الف-ی)" },
+] as const;
+
 const ArticlesPage = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { ref, inView } = useInView({ threshold: 0 });
+
+  // State
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,15 +89,10 @@ const ArticlesPage = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
-  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [isFiltering, setIsFiltering] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const { ref, inView } = useInView({
-    threshold: 0,
-  });
-  const router = useRouter();
-
+  // Fetch articles
   const fetchArticles = async (pageNum: number) => {
     try {
       setLoading(true);
@@ -125,34 +115,12 @@ const ArticlesPage = () => {
     } catch (error) {
       console.error("Error fetching articles:", error);
     } finally {
-      alert("done");
       setLoading(false);
       setIsFiltering(false);
     }
   };
 
-  useEffect(() => {
-    setIsFiltering(true);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    setTimeoutId(setTimeout(() => {
-      handleFilterClick("search", searchText);
-    }, 1000));
-  }, [searchText]);
-
-  useEffect(() => {
-    setIsFiltering(true);
-    setPage(1);
-    fetchArticles(1);
-  }, [searchQuery, selectedCategory, sortBy]);
-
-  const sortOptions = [
-    { value: "newest", label: "جدیدترین" },
-    { value: "oldest", label: "قدیمی‌ترین" },
-    { value: "title", label: "عنوان (الف-ی)" },
-  ];
-
+  // Fetch categories
   const fetchCategories = async () => {
     try {
       const data = await getCategories();
@@ -162,10 +130,32 @@ const ArticlesPage = () => {
     }
   };
 
+  // Handle search text changes with debounce
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    setIsFiltering(true);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    const newTimeoutId = setTimeout(() => {
+      handleFilterClick("search", searchText);
+    }, 1000);
+    setTimeoutId(newTimeoutId);
 
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [searchText]);
+
+  // Fetch articles when filters change
+  useEffect(() => {
+    setIsFiltering(true);
+    setPage(1);
+    fetchArticles(1);
+  }, [searchQuery, selectedCategory, sortBy]);
+
+  // Load more articles when scrolling
   useEffect(() => {
     if (inView && hasMore && !loading) {
       setPage((prev) => prev + 1);
@@ -173,51 +163,59 @@ const ArticlesPage = () => {
     }
   }, [inView, hasMore, loading]);
 
+  // Load categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
+  // Handle filter changes
   const handleFilterClick = (type: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-
-    if (type === "clear") {
-      params.delete("search");
-      params.delete("category");
-      params.delete("sort");
-      setSearchQuery("");
-      setSearchText("");
-      setSelectedCategory("");
-      setSortBy("newest");
-    }
-    if (type === "search") {
-      if (value !== "") {
-        params.set("search", value);
-        setSearchQuery(value);
-      } else {
+    
+    switch (type) {
+      case "clear":
         params.delete("search");
+        params.delete("category");
+        params.delete("sort");
         setSearchQuery("");
         setSearchText("");
-      }
-    }
-    if (type === "category") {
-      if (value !== "") {
-        params.set("category", value);
-        setSelectedCategory(value);
-      } else {
-        params.delete("category");
         setSelectedCategory("");
-      }
-    }
-    if (type === "sort") {
-      if (value !== "") {
-        params.set("sort", value);
-        setSortBy(value);
-      } else {
-        params.delete("sort");
         setSortBy("newest");
-      }
+        break;
+      case "search":
+        if (value) {
+          params.set("search", value);
+          setSearchQuery(value);
+        } else {
+          params.delete("search");
+          setSearchQuery("");
+          setSearchText("");
+        }
+        break;
+      case "category":
+        if (value) {
+          params.set("category", value);
+          setSelectedCategory(value);
+        } else {
+          params.delete("category");
+          setSelectedCategory("");
+        }
+        break;
+      case "sort":
+        if (value) {
+          params.set("sort", value);
+          setSortBy(value);
+        } else {
+          params.delete("sort");
+          setSortBy("newest");
+        }
+        break;
     }
 
     router.push(`?${params.toString()}`);
   };
 
+  // Category selector component
   const CategorySelector = () => {
     if (isDesktop) {
       return (
@@ -242,9 +240,7 @@ const ArticlesPage = () => {
                 {categories.map((category) => (
                   <CommandItem
                     key={category.id}
-                    onSelect={() => {
-                      handleFilterClick("category", category.slug);
-                    }}
+                    onSelect={() => handleFilterClick("category", category.slug)}
                   >
                     <Check
                       className={cn(
@@ -298,15 +294,16 @@ const ArticlesPage = () => {
     );
   };
 
+  // Sort selector component
   const SortSelector = () => {
     if (isDesktop) {
       return (
-        <Select dir="rtl" value={sortBy} onValueChange={setSortBy}>
+        <Select dir="rtl" value={sortBy} onValueChange={(value) => handleFilterClick("sort", value)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="مرتب‌سازی" />
           </SelectTrigger>
           <SelectContent>
-            {sortOptions.map((option) => (
+            {SORT_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
@@ -329,7 +326,7 @@ const ArticlesPage = () => {
               <DrawerTitle>مرتب‌سازی مقالات</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-6">
-              {sortOptions.map((option) => (
+              {SORT_OPTIONS.map((option) => (
                 <Button
                   key={option.value}
                   variant="ghost"
@@ -352,135 +349,142 @@ const ArticlesPage = () => {
     );
   };
 
+  // Loading skeleton component
+  const LoadingSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[...Array(page === 1 ? 12 : 6)].map((_, index) => (
+        <div key={index} className="bg-background rounded-2xl border relative overflow-hidden">
+          <div className="flex flex-col md:flex-row p-2">
+            <Skeleton className="h-38 w-full md:h-40 md:w-40 rounded-xl" />
+            <div className="relative p-2 pt-4 md:pt-2 md:pr-4 flex flex-col justify-between gap-4">
+              <div>
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div>
+                  <Skeleton className="h-4 w-20 mb-1" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // No results component
+  const NoResults = () => (
+    <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="rounded-full bg-muted p-3 mb-4">
+        <FileSearch className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">مقاله‌ای یافت نشد</h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        {searchQuery
+          ? `نتیجه‌ای برای "${searchQuery}" یافت نشد. لطفاً عبارت دیگری را امتحان کنید.`
+          : selectedCategory
+          ? `مقاله‌ای در دسته‌بندی "${selectedCategory}" یافت نشد.`
+          : "در حال حاضر مقاله‌ای برای نمایش وجود ندارد."}
+      </p>
+    </div>
+  );
+
+  // Active filters component
+  const ActiveFilters = () => {
+    if (!searchQuery && !selectedCategory && sortBy === "newest") return null;
+
+    return (
+      <div className="flex items-center gap-2 overflow-x-auto">
+        <span className="text-sm text-muted-foreground shrink-0">فیلترهای فعال:</span>
+        {searchQuery && (
+          <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
+            <span>جستجو: {searchQuery}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 hover:bg-transparent"
+              onClick={() => handleFilterClick("search", "")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        {selectedCategory && (
+          <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
+            <span>دسته‌بندی: {categories.find(c => c.slug === selectedCategory)?.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 hover:bg-transparent"
+              onClick={() => handleFilterClick("category", "")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        {sortBy !== "newest" && (
+          <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
+            <span>مرتب‌سازی: {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 hover:bg-transparent"
+              onClick={() => handleFilterClick("sort", "newest")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-sm text-muted-foreground hover:text-foreground shrink-0"
+          onClick={() => handleFilterClick("clear", "")}
+        >
+          حذف همه فیلترها
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto p-4 grid gap-4">
-
       <div className="flex flex-row-reverse items-center gap-4">
         <CategorySelector />
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="جستجو در مقالات..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="pl-10"
+              className={`pl-10 ${isFiltering && searchText ? "pr-10" : ""}`}
             />
+            {isFiltering && searchText && <Loader2 className="animate-spin absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
           </div>
         </div>
         <SortSelector />
       </div>
 
-      {(searchQuery || selectedCategory || sortBy !== "newest") && (
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <span className="text-sm text-muted-foreground shrink-0">فیلترهای فعال:</span>
-          {searchQuery && (
-            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
-              <span>جستجو: {searchQuery}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={() => handleFilterClick("search", "")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-          {selectedCategory && (
-            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
-              <span>دسته‌بندی: {categories.find(c => c.slug === selectedCategory)?.name}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={() => handleFilterClick("category", "")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-          {sortBy !== "newest" && (
-            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm shrink-0">
-              <span>مرتب‌سازی: {sortOptions.find(opt => opt.value === sortBy)?.label}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={() => handleFilterClick("sort", "newest")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-sm text-muted-foreground hover:text-foreground shrink-0"
-            onClick={() => {
-              handleFilterClick("clear", "");
-            }}
-          >
-            حذف همه فیلترها
-          </Button>
-        </div>
-      )}
+      <ActiveFilters />
 
       {articles.length > 0 && !isFiltering ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {articles.map((article) => (
-            <SecondArticleCard
-              key={article.id}
-              article={article}
-            />
-          ))}
-        </div>)
-        :
-        !loading && !isFiltering && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center">
-            <div className="rounded-full bg-muted p-3 mb-4">
-              <FileSearch className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">مقاله‌ای یافت نشد</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              {searchQuery ?
-                `نتیجه‌ای برای "${searchQuery}" یافت نشد. لطفاً عبارت دیگری را امتحان کنید.` :
-                selectedCategory ?
-                  `مقاله‌ای در دسته‌بندی "${selectedCategory}" یافت نشد.` :
-                  "در حال حاضر مقاله‌ای برای نمایش وجود ندارد."}
-            </p>
-          </div>
-        )}
-      {loading || isFiltering ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(page == 1 ? 12 : 6)].map((_, index) => (
-            <div key={index} className="bg-background rounded-2xl border relative overflow-hidden">
-              <div className="flex flex-col md:flex-row p-2">
-                <Skeleton className="h-38 w-full md:h-40 md:w-40 rounded-xl" />
-                <div className="relative p-2 pt-4 md:pt-2 md:pr-4 flex flex-col justify-between gap-4">
-                  <div>
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-3 w-full mb-1" />
-                    <Skeleton className="h-3 w-2/3" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div>
-                      <Skeleton className="h-4 w-20 mb-1" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {articles.map((article, index) => (
+            <SecondArticleCard key={article.id} article={article} index={index} />
           ))}
         </div>
-      ) : ""}
+      ) : !loading && !isFiltering ? (
+        <NoResults />
+      ) : null}
 
+      {(loading || isFiltering) && <LoadingSkeleton />}
 
-      {!isFiltering && (
-        <div ref={ref} className="h-10" />
-      )}
+      {!isFiltering && <div ref={ref} className="h-10" />}
     </div>
   );
 };

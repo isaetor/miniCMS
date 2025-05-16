@@ -1,132 +1,132 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Session } from "next-auth";
 import CommentForm from "./CommentForm";
 import CommentItem from "./CommentItem";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { LoginLink } from "@/components/auth/LoginLink";
-
-interface Comment {
-    id: number;
-    userName: string;
-    content: string;
-    createdAt: string;
-    replies: Reply[];
-}
-
-interface Reply {
-    id: number;
-    userName: string;
-    content: string;
-    createdAt: string;
-    replies?: Reply[];
-}
+import { getComments, createComment } from "@/app/actions/comments";
+import { toast } from "sonner";
+import { ArticleComment, CommentItemProps } from "@/types/comments";
 
 interface CommentsProps {
     initialSession: Session | null;
+    articleId: string;
 }
 
-const Comments = ({ initialSession }: CommentsProps) => {
-    const [comments, setComments] = useState<Comment[]>([
-        {
-            id: 1,
-            userName: "کاربر 1",
-            content: "این یک نظر تستی است. لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است.",
-            createdAt: "2024/03/15",
-            replies: [
-                {
-                    id: 4,
-                    userName: "کاربر 2",
-                    content: "این یک پاسخ تستی است.",
-                    createdAt: "2024/03/15",
-                    replies: []
-                }
-            ]
-        },
-        {
-            id: 2,
-            userName: "کاربر 2",
-            content: "این یک نظر تستی است. لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است.",
-            createdAt: "2024/03/15",
-            replies: []
-        },
-        {
-            id: 3,
-            userName: "کاربر 3",
-            content: "این یک نظر تستی است. لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است.",
-            createdAt: "2024/03/15",
-            replies: []
+const Comments = ({ initialSession, articleId }: CommentsProps) => {
+    const [comments, setComments] = useState<ArticleComment[]>([]);
+    const [isReplying, setIsReplying] = useState<Record<string, boolean>>({});
+    const [replyingTo, setReplyingTo] = useState<Record<string, string>>({});
+
+    const fetchComments = useCallback(async () => {
+        try {
+            const comments = await getComments(articleId);
+            setComments(comments as ArticleComment[]);
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+            toast.error("خطا در دریافت نظرات");
         }
-    ]);
+    }, [articleId]);
 
-    const [replyingTo, setReplyingTo] = useState<{ [key: string]: number | null }>({});
+    useEffect(() => {
+        fetchComments();
+    }, [fetchComments]);
 
-    const handleCommentSubmit = async (content: string) => {
-        // TODO: Implement API call to submit comment
-        console.log('Submitting comment:', content);
-    };
+    const handleSubmit = async (content: string) => {
+        try {
+            const result = await createComment({
+                content,
+                articleId,
+            });
 
-    const handleReplySubmit = (commentId: number, content: string, parentId?: number) => {
-        // TODO: Implement API call to submit reply
-        console.log('Submitting reply:', { commentId, content, parentId });
-
-        // ایجاد پاسخ جدید
-        const newReply: Reply = {
-            id: Date.now(), // در حالت واقعی از API دریافت می‌شود
-            userName: initialSession?.user?.firstName || "کاربر ناشناس", // در حالت واقعی از API دریافت می‌شود
-            content,
-            createdAt: new Date().toISOString(),
-            replies: []
-        };
-
-        // به‌روزرسانی state
-        setComments(prevComments => {
-            if (!parentId) {
-                // اگر پاسخ به کامنت اصلی است
-                return prevComments.map(comment =>
-                    comment.id === commentId
-                        ? { ...comment, replies: [...comment.replies, newReply] }
-                        : comment
-                );
+            if (result.success) {
+                toast.success("دیدگاه شما با موفقیت ثبت شد و پس از تایید نمایش داده خواهد شد");
             } else {
-                // اگر پاسخ به یک پاسخ دیگر است
-                return prevComments.map(comment => {
-                    if (comment.id === parentId) {
+                toast.error(result.message || "خطا در ثبت دیدگاه");
+            }
+        } catch (error) {
+            toast.error("خطا در ثبت دیدگاه");
+        }
+    };
+
+    const handleReply = async (parentId: string, content: string, replyToParentId?: string) => {
+        try {
+            const result = await createComment({
+                content,
+                articleId,
+                parentId: replyToParentId || parentId,
+            });
+
+            if (result.success) {
+                toast.success("پاسخ شما با موفقیت ثبت شد و پس از تایید نمایش داده خواهد شد");
+                setIsReplying({});
+            } else {
+                toast.error(result.message || "خطا در ثبت پاسخ");
+            }
+        } catch (error) {
+            toast.error("خطا در ثبت پاسخ");
+        }
+    };
+
+    const handleReplyClick = (commentId: string, parentId?: string) => {
+        setIsReplying((prev) => ({
+            ...prev,
+            [commentId]: !prev[commentId],
+        }));
+        if (parentId) {
+            setReplyingTo((prev) => ({
+                ...prev,
+                [commentId]: parentId,
+            }));
+        }
+    };
+
+    const transformCommentToCommentItemProps = useCallback((comment: ArticleComment): CommentItemProps => {
+        const { parentId: _, ...rest } = comment;
+        return {
+            ...rest,
+            onReply: handleReply,
+            isReplying: isReplying[comment.id],
+            onReplyClick: handleReplyClick,
+            replyingTo,
+            isLoggedIn: !!initialSession,
+            replies: (comment.replies || []).map(reply => {
+                const { parentId: __, ...replyRest } = reply;
+                const replyKey = `${comment.id}-${reply.id}`;
+                return {
+                    ...replyRest,
+                    onReply: handleReply,
+                    isReplying: isReplying[replyKey],
+                    onReplyClick: (replyId) => handleReplyClick(replyId, comment.id),
+                    replyingTo,
+                    parentId: comment.id,
+                    isLoggedIn: !!initialSession,
+                    replies: (reply.replies || []).map((nestedReply: ArticleComment) => {
+                        const { parentId: ___, ...nestedReplyRest } = nestedReply;
+                        const nestedReplyKey = `${reply.id}-${nestedReply.id}`;
                         return {
-                            ...comment,
-                            replies: comment.replies.map(reply =>
-                                reply.id === commentId
-                                    ? { ...reply, replies: [...(reply.replies || []), newReply] }
-                                    : reply
-                            )
+                            ...nestedReplyRest,
+                            onReply: handleReply,
+                            isReplying: isReplying[nestedReplyKey],
+                            onReplyClick: (replyId) => handleReplyClick(replyId, reply.id),
+                            replyingTo,
+                            parentId: reply.id,
+                            isLoggedIn: !!initialSession,
+                            replies: []
                         };
-                    }
-                    return comment;
-                });
-            }
-        });
-
-        setReplyingTo({});
-    };
-
-    const handleReplyClick = (commentId: number, parentId?: number) => {
-        if (!initialSession) return; // اگر کاربر وارد نشده، اجازه پاسخ نده
-        const key = parentId ? `${parentId}-${commentId}` : `${commentId}`;
-        setReplyingTo(prev => {
-            if (prev[key] === commentId) {
-                return {};
-            }
-            return { [key]: commentId };
-        });
-    };
+                    })
+                };
+            })
+        };
+    }, [handleReply, handleReplyClick, initialSession, isReplying, replyingTo]);
 
     return (
         <div role="region" aria-label="Comments section" className="space-y-4">
-            {initialSession && <CommentForm onSubmit={handleCommentSubmit} />}
-            {!initialSession &&
+            {initialSession ? (
+                <CommentForm onSubmit={handleSubmit} />
+            ) : (
                 <div className="bg-accent flex flex-col items-center justify-center text-center gap-4 rounded-lg p-4">
                     <AlertCircle size={32} strokeWidth={1.5} />
                     <div>
@@ -137,17 +137,12 @@ const Comments = ({ initialSession }: CommentsProps) => {
                         ورود به حساب کاربری
                     </LoginLink>
                 </div>
-            }
+            )}
             <div className="grid gap-4">
                 {comments.map((comment) => (
                     <CommentItem
                         key={comment.id}
-                        {...comment}
-                        onReply={handleReplySubmit}
-                        isReplying={replyingTo[`${comment.id}`] === comment.id}
-                        onReplyClick={(replyId, parentId) => handleReplyClick(replyId, parentId)}
-                        replyingTo={replyingTo}
-                        isLoggedIn={!!initialSession}
+                        {...transformCommentToCommentItemProps(comment)}
                     />
                 ))}
             </div>

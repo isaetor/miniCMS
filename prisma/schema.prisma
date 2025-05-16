@@ -124,6 +124,7 @@ model Comment {
   content   String    @db.Text
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  isApproved Boolean  @default(false)
 
   // Relations
   authorId   String

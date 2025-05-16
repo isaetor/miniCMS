@@ -5,8 +5,30 @@ import { Badge } from "@/components/ui/badge";
 import ArticleCard from "@/components/app/articles/ArticleCard";
 import PopularCategories from "@/components/app/home/PopularCategories";
 import SearchForm from "@/components/app/home/SearchForm";
+import { getArticles } from "../actions/articles";
+import { Article as PrismaArticle } from "@prisma/client";
+import Link from "next/link";
+
+type Article = PrismaArticle & {
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  author: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    image: string | null;
+  };
+};
 
 export default async function Home() {
+  const { articles } = await getArticles({
+    limit: 9,
+    sort: "newest",
+  });
+
   return (
     <div className="container max-w-screen-lg mx-auto p-4">
       <section className="flex md:flex-col flex-col-reverse gap-10 md:py-20 items-center justify-center">
@@ -22,23 +44,23 @@ export default async function Home() {
         <PopularCategories />
       </section>
 
-
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-20">
-        {/* {articles.map((article, index) => (
-          <ArticleCard key={index} article={article} index={index} />
-        ))} */}
+        {articles.map((article: Article, index: number) => (
+          <ArticleCard key={article.id} article={article} index={index} />
+        ))}
       </section>
 
       <section className="flex flex-col gap-2 justify-center items-center text-center py-20">
         <LayoutGrid strokeWidth={1.5} className="text-blue-500 size-7 md:size-9" />
         <h3 className="text-xl md:text-2xl font-black">مقالات بیشتر</h3>
         <p className="text-muted-foreground text-sm md:text-base mb-4">می‌توانید از طریق لینک زیر به صفحه مقالات منتقل شوید</p>
-        <Button variant="outline" className="w-fit">
-          مشاهده همه مقالات
-          <ChevronLeft className="w-4 h-4" />
+        <Button asChild variant="outline" className="w-fit">
+          <Link href="/articles">
+            مشاهده همه مقالات
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
         </Button>
       </section>
-
     </div>
   );
 }

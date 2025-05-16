@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx"
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -16,7 +16,27 @@ export function generateOTP(length = 6): string {
   return otp
 }
 
-export function formatDate(date: string) {
-  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' }
-  return new Date(date).toLocaleDateString('fa-IR', options)
+export function formatDate(date: Date | string) {
+  const d = new Date(date);
+  return new Intl.DateTimeFormat("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(d);
+}
+
+export function formatCommentDate(date: Date | string) {
+  const d = new Date(date);
+  return new Intl.DateTimeFormat("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+export function formatAuthorName(firstName: string | null, lastName: string | null): string {
+  if (!firstName && !lastName) return "کاربر مقالیتو";
+  return [firstName, lastName].filter(Boolean).join(" ");
 }
