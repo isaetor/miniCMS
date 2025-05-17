@@ -7,7 +7,7 @@ interface Props {
   searchParams: { slug?: string };
 }
 
-export default async function ArticleEditPage({ searchParams }: Props) {
+export default async function <New></New>ArticlePage({ searchParams }: Props) {
   const slug = searchParams.slug;
 
   let article = null;
