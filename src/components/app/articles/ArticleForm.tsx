@@ -322,14 +322,14 @@ export default function ArticleForm({ initialArticle, categories }: Props) {
                     placeholder="محتوای مقاله را وارد کنید"
                     value={article.content}
                     onChange={(e) => autoSave("content", e.target.value)}
-                    className="min-h-[500px] border-none shadow-none"
+                    className="min-h-[500px] border-none shadow-none text-muted-foreground !leading-9"
                 />
 
                 <Textarea
                     placeholder="خلاصه مقاله"
                     value={article.excerpt}
                     onChange={(e) => autoSave("excerpt", e.target.value)}
-                    className="min-h-[200px]"
+                    className="min-h-[200px] text-muted-foreground !leading-9"
                 />
 
             </div>

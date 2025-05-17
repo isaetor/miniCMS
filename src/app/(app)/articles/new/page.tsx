@@ -4,11 +4,13 @@ import { getArticleInEditor } from "@/app/actions/articles";
 import { getCategories } from "@/app/actions/categories";
 
 interface Props {
-  searchParams: { slug?: string };
+  searchParams: Promise<{
+    slug?: string;
+  }>;
 }
 
-const Page = async ({ searchParams }: Props) => {
-  const slug = searchParams.slug;
+const NewArticlePage = async ({ searchParams }: Props) => {
+  const { slug } = await searchParams;
 
   let article = null;
 
@@ -24,4 +26,4 @@ const Page = async ({ searchParams }: Props) => {
   return <ArticleForm initialArticle={article} categories={categories} />;
 };
 
-export default Page;
+export default NewArticlePage;
