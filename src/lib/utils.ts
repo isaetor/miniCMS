@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import slugify from "slugify"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -36,7 +37,9 @@ export function formatCommentDate(date: Date | string) {
   }).format(d);
 }
 
-export function formatAuthorName(firstName: string | null, lastName: string | null): string {
-  if (!firstName && !lastName) return "کاربر مقالیتو";
-  return [firstName, lastName].filter(Boolean).join(" ");
+export function formatAuthorName(firstName: string | null, lastName: string | null) {
+  if (!firstName && !lastName) return "ناشناس"
+  return `${firstName || ""} ${lastName || ""}`.trim()
 }
+
+export { slugify }

@@ -14,9 +14,10 @@ interface EmailFormProps {
   onSubmit: (email: string) => Promise<void>
   isLoading: boolean
   initialEmail?: string
+  callbackUrl?: string
 }
 
-export function EmailForm({ onSubmit, isLoading, initialEmail = '' }: EmailFormProps) {
+export function EmailForm({ onSubmit, isLoading, initialEmail = '', callbackUrl = '/' }: EmailFormProps) {
   const [email, setEmail] = useState(initialEmail)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [isEmailValid, setIsEmailValid] = useState(false)
@@ -106,11 +107,11 @@ export function EmailForm({ onSubmit, isLoading, initialEmail = '' }: EmailFormP
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <SignInButton provider="google" variant="outline">
+          <SignInButton provider="google" variant="outline" callbackUrl={callbackUrl}>
             <GoogleIcon className="mr-2 h-4 w-4" />
             گوگل
           </SignInButton>
-          <SignInButton provider="github" variant="outline">
+          <SignInButton provider="github" variant="outline" callbackUrl={callbackUrl}>
             <GithubIcon className="mr-2 h-4 w-4" />
             گیت هاب
           </SignInButton>

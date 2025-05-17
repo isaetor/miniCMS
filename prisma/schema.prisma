@@ -2,29 +2,29 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
+
 generator client {
   provider = "prisma-client-js"
 }
- 
+
 model User {
-  id            String          @id @default(cuid())
+  id            String    @id @default(cuid())
   firstName     String?
   lastName      String?
-  email         String          @unique
+  email         String    @unique
   emailVerified DateTime?
-  isActive      Boolean         @default(true)
-  role          Role            @default(USER)
+  isActive      Boolean   @default(true)
+  role          Role      @default(USER)
   image         String?
   accounts      Account[]
   sessions      Session[]
   articles      Article[]
   comments      Comment[]
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
+
 model Account {
   userId            String
   type              String
@@ -37,30 +37,30 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@id([provider, providerAccountId])
 }
- 
+
 model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
+
 model VerificationToken {
   identifier String
   token      String
   expires    DateTime
- 
+
   @@id([identifier, token])
 }
 
@@ -76,7 +76,7 @@ model LoginLog {
   id        String   @id @default(cuid())
   userEmail String
   method    String
-  type      String   // login | logout
+  type      String // login | logout
   timestamp DateTime @default(now())
 }
 
@@ -88,52 +88,53 @@ model Notification {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
   articles Article[]
 }
 
 model Article {
-  id          String    @id @default(cuid())
-  title       String
-  slug        String    @unique
-  content     String    @db.Text
-  excerpt     String?   @db.Text
-  image       String?
-  published   Boolean   @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Relations
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
-  categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id])
-  comments    Comment[]
-}
-
-model Comment {
   id        String    @id @default(cuid())
+  title     String
+  slug      String    @unique
   content   String    @db.Text
+  excerpt   String?   @db.Text
+  image     String?
+  published DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  isApproved Boolean  @default(false)
 
   // Relations
   authorId   String
   author     User      @relation(fields: [authorId], references: [id])
-  articleId  String
-  article    Article   @relation(fields: [articleId], references: [id])
-  parentId   String?
-  parent     Comment?  @relation("CommentToComment", fields: [parentId], references: [id])
-  replies    Comment[] @relation("CommentToComment")
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  comments   Comment[]
+
+  @@index([authorId])
+  @@index([categoryId])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isApproved Boolean  @default(false)
+
+  // Relations
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  articleId String
+  article   Article   @relation(fields: [articleId], references: [id])
+  parentId  String?
+  parent    Comment?  @relation("CommentToComment", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentToComment")
 }
 
 enum Role {

@@ -18,7 +18,7 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
-
+  console.log(callbackUrl)
   const handleEmailSubmit = useCallback(async (email: string) => {
     setIsLoading(true)
     try {
@@ -81,6 +81,7 @@ export function LoginForm() {
             onSubmit={handleEmailSubmit}
             initialEmail={email}
             isLoading={isLoading}
+            callbackUrl={callbackUrl}
           />
         )}
 

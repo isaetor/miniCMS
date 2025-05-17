@@ -10,9 +10,6 @@ interface Category {
     id: string
     name: string
     slug: string
-    _count: {
-        articles: number
-    }
 }
 
 export default function PopularCategories() {

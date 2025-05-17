@@ -32,7 +32,7 @@ const ArticleCard = ({ article, index }: ArticleCardProps) => {
           </div>
           <div className="bg-white rounded-tl-xl rounded-bl-xl p-4">
             <h2 className="text-sm md:text-base font-bold mb-2 line-clamp-2">{article.title}</h2>
-            <p className="text-xs text-muted-foreground leading-5 line-clamp-2 md:line-clamp-3">{article.excerpt}</p>
+            <p className="text-xs text-muted-foreground leading-5 line-clamp-2">{article.excerpt}</p>
           </div>
           <div className="bg-white rounded-b-xl w-fit p-1.5 pt-0 pl-6">
             <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ const ArticleCard = ({ article, index }: ArticleCardProps) => {
               />
               <div>
                 <p className="text-xs mb-1">{formatAuthorName(article.author.firstName, article.author.lastName)}</p>
-                <p className="text-xs text-muted-foreground">{formatDate(article.createdAt)}</p>
+                {article.published && <p className="text-xs text-muted-foreground">{formatDate(article.published)}</p>}
               </div>
             </div>
           </div>

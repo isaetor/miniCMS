@@ -15,11 +15,12 @@ interface Props {
 const ArticlePage = async ({ params }: Props) => {
     const { slug } = await params;
     const article = await getArticle(slug);
-    const similarArticles = await getSimilarArticles(article.id, article.categoryId);
 
     if (!article) {
         notFound();
     }
+
+    const similarArticles = await getSimilarArticles(article.id, article.categoryId);
 
     return (
         <div className="container mx-auto md:px-4">
@@ -35,7 +36,7 @@ const ArticlePage = async ({ params }: Props) => {
                         <div className="size-8 bg-primary/10 text-primary rounded-full p-1 flex items-center justify-center">
                             <Calendar size={16} />
                         </div>
-                        <p className="text-sm">{formatDate(article.createdAt)}</p>
+                        {article.published && <p className="text-sm">{formatDate(article.published)}</p>}
                     </div>
                 </div>
                 <div className="px-4 leading-9 text-foreground/70" dangerouslySetInnerHTML={{

@@ -2,17 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import { signIn } from "next-auth/react"
-import { usePathname, useSearchParams } from "next/navigation"
 import { ComponentProps } from "react"
 
 interface SignInButtonProps extends ComponentProps<typeof Button> {
   provider: "google" | "github"
+  callbackUrl?: string
 }
 
-export default function SignInButton({ provider, children, ...props }: SignInButtonProps) {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const callbackUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+export default function SignInButton({ provider, children, callbackUrl, ...props }: SignInButtonProps) {
 
   const handleSignIn = () => {
     signIn(provider, { callbackUrl })

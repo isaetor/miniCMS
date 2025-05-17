@@ -24,8 +24,8 @@ const SecondArticleCard = ({ article }: ArticleCardProps) => {
                 </div>
                 <div className="relative p-2 pt-4 md:pt-2 md:pr-4 flex flex-col justify-between gap-4">
                     <div>
-                        <h2 className="text-sm md:text-base font-bold mb-2 line-clamp-2">{article.title}</h2>
-                        <p className="text-xs text-muted-foreground leading-5 line-clamp-2 md:line-clamp-3">{article.excerpt}</p>
+                        <h2 className="text-sm font-bold mb-2 line-clamp-2">{article.title}</h2>
+                        <p className="text-xs text-muted-foreground leading-5 line-clamp-2">{article.excerpt}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Image
@@ -38,7 +38,7 @@ const SecondArticleCard = ({ article }: ArticleCardProps) => {
                         />
                         <div>
                             <p className="text-sm">{formatAuthorName(article.author.firstName, article.author.lastName)}</p>
-                            <p className="text-xs text-muted-foreground">{formatDate(article.createdAt)}</p>
+                            {article.published && <p className="text-xs text-muted-foreground">{formatDate(article.published)}</p>}
                         </div>
                     </div>
                 </div>

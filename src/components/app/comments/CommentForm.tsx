@@ -15,8 +15,8 @@ interface CommentFormProps {
     isReply?: boolean;
 }
 
-const MAX_CONTENT_LENGTH = 1000; // حداکثر طول متن
-const MIN_CONTENT_LENGTH = 3; // حداقل طول متن
+const MAX_CONTENT_LENGTH = 1000;
+const MIN_CONTENT_LENGTH = 3;
 
 const CommentForm = ({ 
     onSubmit, 
@@ -30,7 +30,6 @@ const CommentForm = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isValid, setIsValid] = useState(false);
 
-    // بررسی اعتبار محتوا
     useEffect(() => {
         const trimmedContent = content.trim();
         const isContentValid = 

@@ -53,18 +53,11 @@ interface Category {
   slug: string;
 }
 
-interface Author {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  image: string | null;
-}
-
 const convertDatesToStrings = (article: any): Article => ({
   ...article,
   createdAt: article.createdAt.toISOString(),
   updatedAt: article.updatedAt.toISOString(),
-  publishedAt: article.publishedAt?.toISOString() || null,
+  published: article.published?.toISOString() || null,
 });
 
 const SORT_OPTIONS = [
@@ -79,20 +72,18 @@ const ArticlesPage = () => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { ref, inView } = useInView({ threshold: 0 });
 
-  // State
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(searchParams.get("search") || "");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [isFiltering, setIsFiltering] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  // Fetch articles
   const fetchArticles = async (pageNum: number) => {
     try {
       setLoading(true);
@@ -120,7 +111,6 @@ const ArticlesPage = () => {
     }
   };
 
-  // Fetch categories
   const fetchCategories = async () => {
     try {
       const data = await getCategories();
@@ -130,7 +120,6 @@ const ArticlesPage = () => {
     }
   };
 
-  // Handle search text changes with debounce
   useEffect(() => {
     setIsFiltering(true);
     if (timeoutId) {
@@ -148,14 +137,12 @@ const ArticlesPage = () => {
     };
   }, [searchText]);
 
-  // Fetch articles when filters change
   useEffect(() => {
     setIsFiltering(true);
     setPage(1);
     fetchArticles(1);
   }, [searchQuery, selectedCategory, sortBy]);
 
-  // Load more articles when scrolling
   useEffect(() => {
     if (inView && hasMore && !loading) {
       setPage((prev) => prev + 1);
@@ -163,12 +150,10 @@ const ArticlesPage = () => {
     }
   }, [inView, hasMore, loading]);
 
-  // Load categories on mount
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Handle filter changes
   const handleFilterClick = (type: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     
@@ -215,7 +200,6 @@ const ArticlesPage = () => {
     router.push(`?${params.toString()}`);
   };
 
-  // Category selector component
   const CategorySelector = () => {
     if (isDesktop) {
       return (
@@ -294,7 +278,6 @@ const ArticlesPage = () => {
     );
   };
 
-  // Sort selector component
   const SortSelector = () => {
     if (isDesktop) {
       return (
@@ -349,7 +332,6 @@ const ArticlesPage = () => {
     );
   };
 
-  // Loading skeleton component
   const LoadingSkeleton = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {[...Array(page === 1 ? 12 : 6)].map((_, index) => (
@@ -376,7 +358,6 @@ const ArticlesPage = () => {
     </div>
   );
 
-  // No results component
   const NoResults = () => (
     <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="rounded-full bg-muted p-3 mb-4">
@@ -393,7 +374,6 @@ const ArticlesPage = () => {
     </div>
   );
 
-  // Active filters component
   const ActiveFilters = () => {
     if (!searchQuery && !selectedCategory && sortBy === "newest") return null;
 

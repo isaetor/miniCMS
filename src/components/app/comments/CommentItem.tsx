@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { formatCommentDate } from "@/lib/utils";
+import { formatAuthorName, formatCommentDate } from "@/lib/utils";
 import Image from "next/image";
 import { MessageSquarePlus } from "lucide-react";
 import CommentForm from "./CommentForm";
@@ -32,12 +32,12 @@ const CommentItem = ({
                     <Image 
                         className="rounded-full" 
                         src={author.image || "/images/default-avatar.jpg"} 
-                        alt={`${author.firstName || author.lastName || "کاربر"} کاربر`} 
+                        alt={formatAuthorName(author.firstName, author.lastName)} 
                         width={32} 
                         height={32} 
                     />
                     <div>
-                        <p className="text-sm mb-1">{author.firstName || author.lastName || "کاربر ناشناس"}</p>
+                        <p className="text-sm mb-1">{formatAuthorName(author.firstName, author.lastName)}</p>
                         <p className="text-xs text-muted-foreground">{formatCommentDate(createdAt)}</p>
                     </div>
                 </div>

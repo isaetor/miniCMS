@@ -1,19 +1,14 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react";
-import { Session } from "next-auth";
 import CommentForm from "./CommentForm";
 import CommentItem from "./CommentItem";
 import { AlertCircle } from "lucide-react";
 import { LoginLink } from "@/components/auth/LoginLink";
-import { getComments, createComment } from "@/app/actions/comments";
+import { getCommentsByArticleId, createComment } from "@/app/actions/comments";
 import { toast } from "sonner";
-import { ArticleComment, CommentItemProps } from "@/types/comments";
+import { ArticleComment, CommentItemProps, CommentsProps } from "@/types/comments";
 
-interface CommentsProps {
-    initialSession: Session | null;
-    articleId: string;
-}
 
 const Comments = ({ initialSession, articleId }: CommentsProps) => {
     const [comments, setComments] = useState<ArticleComment[]>([]);
@@ -22,7 +17,7 @@ const Comments = ({ initialSession, articleId }: CommentsProps) => {
 
     const fetchComments = useCallback(async () => {
         try {
-            const comments = await getComments(articleId);
+            const comments = await getCommentsByArticleId(articleId);
             setComments(comments as ArticleComment[]);
         } catch (error) {
             console.error("Error fetching comments:", error);

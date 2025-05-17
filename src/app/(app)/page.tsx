@@ -6,22 +6,10 @@ import ArticleCard from "@/components/app/articles/ArticleCard";
 import PopularCategories from "@/components/app/home/PopularCategories";
 import SearchForm from "@/components/app/home/SearchForm";
 import { getArticles } from "../actions/articles";
-import { Article as PrismaArticle } from "@prisma/client";
 import Link from "next/link";
+import { Article } from "@/types/article";
 
-type Article = PrismaArticle & {
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  author: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    image: string | null;
-  };
-};
+
 
 export default async function Home() {
   const { articles } = await getArticles({

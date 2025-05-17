@@ -16,7 +16,6 @@ export async function createComment(data: {
             return { success: false, message: "لطفا ابتدا وارد حساب کاربری خود شوید" };
         }
 
-        // Check if user is active
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { isActive: true }
@@ -26,7 +25,6 @@ export async function createComment(data: {
             return { success: false, message: "حساب کاربری شما غیرفعال است. لطفا با پشتیبانی تماس بگیرید" };
         }
 
-        // Check if article exists
         const article = await prisma.article.findUnique({
             where: { id: data.articleId }
         });
@@ -60,7 +58,7 @@ export async function createComment(data: {
     }
 }
 
-export async function getComments(articleId: string) {
+export async function getCommentsByArticleId(articleId: string) {
     try {
         const comments = await prisma.comment.findMany({
             where: {
@@ -102,16 +100,64 @@ export async function getComments(articleId: string) {
         throw error;
     }
 }
-        
-export async function approveComment(commentId: string, sessionUserId: string) {
-    // Check if the user is admin
+
+export async function getComments(approved?: boolean, userId?: string) {
+    try {
+        const whereClause: any = {};
+
+        if (typeof approved === "boolean") {
+            whereClause.isApproved = approved;
+        }
+
+        if (userId) {
+            const session = await auth();
+            if (!session?.user) {
+                throw new Error("لطفا وارد حساب کاربری خود شوید");
+            }
+            if (session.user.id !== userId && session.user.role !== "ADMIN") {
+                throw new Error("شما نمیتوانید نظرات دیگران را مشاهده کنید");
+            }
+            whereClause.authorId = userId;
+        }
+
+        const comments = await prisma.comment.findMany({
+            where: whereClause,
+            orderBy: {
+                createdAt: "desc",
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        image: true,
+                    },
+                },
+            },
+        });
+
+        return comments;
+    } catch (error) {
+        console.error("Error fetching comments:", error);
+        throw error;
+    }
+}
+
+export async function approveComment(commentId: string) {
+    const session = await auth();
+    if (!session?.user) {
+        return { success: false, message: "لطفا ابتدا وارد حساب کاربری خود شوید" };
+    }
     const user = await prisma.user.findUnique({
-        where: { id: sessionUserId },
+        where: { id: session.user.id },
         select: { role: true }
     });
-    if (!user || user.role !== "ADMIN") {
-        return { success: false, message: "دسترسی غیرمجاز" };
+
+    if (user?.role !== "ADMIN") {
+        return { success: false, message: "شما نمیتوانید نظرات را تایید کنید" };
     }
+
     try {
         const comment = await prisma.comment.update({
             where: { id: commentId },
@@ -119,6 +165,54 @@ export async function approveComment(commentId: string, sessionUserId: string) {
         });
         return { success: true, comment };
     } catch (error) {
-        return { success: false, message: "خطا در تایید دیدگاه" };
+        console.error("Error approving comment:", error);
+        return { success: false, message: "خطا در تایید نظر" };
     }
-} 
+}
+
+export async function deleteComment(commentIds: string[], isAdmin: boolean = false) {
+    const session = await auth();
+
+    if (!session?.user) {
+        return { success: false, message: "لطفا ابتدا وارد حساب کاربری خود شوید" };
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+    });
+
+    if (isAdmin && user?.role !== "ADMIN") {
+        return { success: false, message: "شما اجازه حذف نظرات را ندارید" };
+    }
+
+    const comments = await prisma.comment.findMany({
+        where: { id: { in: commentIds } },
+        select: { id: true, authorId: true, articleId: true },
+    });
+
+    if (comments.length === 0) {
+        return { success: false, message: "هیچ نظری یافت نشد" };
+    }
+
+    if (!isAdmin) {
+        const unauthorized = comments.some(comment => comment.authorId !== session.user.id);
+        if (unauthorized) {
+            return { success: false, message: "شما فقط می‌توانید نظرات خود را حذف کنید" };
+        }
+    }
+
+    try {
+        await prisma.comment.deleteMany({
+            where: { id: { in: commentIds } },
+        });
+
+        const articleId = comments[0].articleId;
+        revalidatePath(`/articles/${articleId}`);
+
+        return { success: true, message: "نظر با موفقیت حذف شد" };
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+        return { success: false, message: "خطا در حذف نظر" };
+    }
+}

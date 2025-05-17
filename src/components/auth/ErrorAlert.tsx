@@ -1,11 +1,10 @@
 "use client"
 
 import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert"
 import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 export function ErrorAlert() {
     const searchParams = useSearchParams()
