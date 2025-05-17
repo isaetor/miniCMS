@@ -7,7 +7,7 @@ interface Props {
   searchParams: { slug?: string };
 }
 
-export default async function <New></New>ArticlePage({ searchParams }: Props) {
+const Page = async ({ searchParams }: Props) => {
   const slug = searchParams.slug;
 
   let article = null;
@@ -22,4 +22,6 @@ export default async function <New></New>ArticlePage({ searchParams }: Props) {
   const categories = await getCategories();
 
   return <ArticleForm initialArticle={article} categories={categories} />;
-}
+};
+
+export default Page;
