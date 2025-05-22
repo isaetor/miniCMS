@@ -7,7 +7,7 @@ import { createOrUpdateArticle } from "@/app/actions/articles";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { Article } from "@prisma/client";
+import type { Article } from "@/types/article";
 import { deleteImage, uploadImage } from "@/app/actions/upload";
 import {
   CommandEmpty,
@@ -72,31 +72,18 @@ export default function ArticleForm({ initialArticle, categories }: Props) {
   const searchParams = useSearchParams();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  const [article, setArticle] = useState<ArticleFormData>(() => {
-    if (initialArticle) {
-      return {
-        id: initialArticle.id,
-        title: initialArticle.title,
-        content: initialArticle.content,
-        excerpt: initialArticle.excerpt ?? "",
-        image: initialArticle.image ?? "",
-        categorySlug: initialArticle.category.slug,
-        status: initialArticle.published ? "published" : "draft",
-        slug: initialArticle.slug,
-      };
-    }
+  const defaultValues: ArticleFormData = {
+    id: initialArticle?.id ?? "",
+    title: initialArticle?.title ?? "",
+    content: initialArticle?.content ?? "",
+    excerpt: initialArticle?.excerpt ?? "",
+    image: initialArticle?.image ?? "",
+    categorySlug: initialArticle?.category?.slug ?? "uncategorized",
+    status: initialArticle?.published ? "published" : "draft",
+    slug: initialArticle?.slug ?? "",
+  };
 
-    return {
-      id: "",
-      title: "",
-      content: "",
-      excerpt: "",
-      image: "",
-      categorySlug: "uncategorized",
-      status: "draft",
-      slug: "",
-    };
-  });
+  const [article, setArticle] = useState<ArticleFormData>(defaultValues);
 
   useEffect(() => {
     if (pathname === "/articles/new" && !searchParams.has("slug")) {
@@ -135,7 +122,7 @@ export default function ArticleForm({ initialArticle, categories }: Props) {
       try {
         const result = await createOrUpdateArticle(updatedArticle);
         if (result.success) {
-          setArticle((prev) => ({ ...prev, id: result.article.id }));
+          setArticle((prev) => ({ ...prev, id: result.article!.id }));
           setStatus({ message: "ذخیره شد", isLoading: false, error: false });
           setTimeout(
             () => setStatus({ message: "", isLoading: false, error: false }),

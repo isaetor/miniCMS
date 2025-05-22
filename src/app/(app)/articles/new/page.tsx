@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import ArticleForm from "@/components/app/articles/ArticleForm";
-import { getArticleInEditor } from "@/app/actions/articles";
+import { getArticleBySlug } from "@/app/actions/articles";
 import { getCategories } from "@/app/actions/categories";
 
 interface Props {
@@ -15,7 +15,7 @@ const NewArticlePage = async ({ searchParams }: Props) => {
   let article = null;
 
   if (slug) {
-    article = await getArticleInEditor(slug);
+    article = await getArticleBySlug(slug);
     if (!article) {
       notFound();
     }

@@ -144,41 +144,6 @@ export async function getSimilarArticles(
   }
 }
 
-export async function getArticleInEditor(slug: string) {
-  const session = await auth();
-  if (!session?.user) return null;
-
-  try {
-    const article = await prisma.article.findUnique({
-      where: { slug },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            image: true,
-          },
-        },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-      },
-    });
-
-    if (article?.authorId !== session.user.id) return null;
-
-    return article;
-  } catch (error) {
-    console.error("Error fetching article:", error);
-    throw error;
-  }
-}
-
 export async function createOrUpdateArticle(data: {
   id?: string;
   title: string;
@@ -278,5 +243,34 @@ export async function createOrUpdateArticle(data: {
       message: "مقاله با موفقیت ایجاد شد",
       article: newArticle,
     };
+  }
+}
+
+export async function getArticleBySlug(slug: string) {
+  try {
+    const article = await prisma.article.findUnique({
+      where: { slug },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            image: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+    return article;
+  } catch (error) {
+    console.error("Error fetching article:", error);
+    throw error;
   }
 }
