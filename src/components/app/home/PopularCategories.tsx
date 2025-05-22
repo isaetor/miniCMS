@@ -18,7 +18,7 @@ export default function PopularCategories() {
 
     useEffect(() => {
         const loadCategories = async () => {
-            const categories = await getCategories({ popular: true, limit: 10 })
+            const categories = await getCategories({ popular: true, limit: 12 })
             setCategories(categories)
             setLoading(false)
         }
@@ -40,7 +40,7 @@ export default function PopularCategories() {
     return (
         <>
             {categories.map((category, index) => (
-                <Link href={`/articles?category=${category.slug}`} key={category.id} className="w-fit flex items-center justify-center h-10 px-8 rounded-md bg-muted text-muted-foreground">
+                <Link href={`/articles?category=${category.slug}`} key={category.id} className="w-fit flex items-center justify-center h-10 px-6 rounded-md bg-muted text-muted-foreground">
                     {category.name}
                 </Link>
             ))}

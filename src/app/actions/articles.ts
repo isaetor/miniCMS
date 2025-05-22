@@ -102,8 +102,11 @@ export async function getArticle(slug: string) {
   }
 }
 
-
-export async function getSimilarArticles(articleId: string, categoryId: string, limit = 3) {
+export async function getSimilarArticles(
+  articleId: string,
+  categoryId: string,
+  limit = 3
+) {
   try {
     const articles = await prisma.article.findMany({
       where: {
@@ -157,7 +160,13 @@ export async function getArticleInEditor(slug: string) {
             image: true,
           },
         },
-        category: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
       },
     });
 
@@ -175,71 +184,99 @@ export async function createOrUpdateArticle(data: {
   title: string;
   content: string;
   excerpt?: string;
-  categoryId: string;
+  categorySlug: string;
   image?: string;
   status: "draft" | "published";
   slug?: string;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+  const session = await auth();
+  if (!session?.user)
+    return { success: false, message: "لطفا وارد حساب کاربری خود شوید" };
 
-    let categoryId = data.categoryId;
-    const category = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!category) {
-      const defaultCategory = await prisma.category.findUnique({ where: { id: "uncategorized" } });
-      if (!defaultCategory) throw new Error("Category not found");
-      categoryId = defaultCategory.id;
-    }
+  let categorySlug = data.categorySlug;
+  const category = await prisma.category.findUnique({
+    where: { slug: categorySlug },
+  });
 
-    const articleData: any = {
-      title: data.title || "مقاله بدون عنوان",
-      content: data.content,
-      categoryId,
-      published: data.status === "published" ? new Date() : null,
+  let categoryId = category?.id;
+
+  if (categorySlug === "uncategorized" && !category) {
+    const newCategory = await prisma.category.create({
+      data: {
+        name: "بدون دسته بندی",
+        slug: "uncategorized",
+        description: "مقالات بدون دسته بندی",
+      },
+    });
+    if (!newCategory)
+      return { success: false, message: "دسته بندی مورد نظر یافت نشد" };
+    categoryId = newCategory.id;
+  } else if (!category) {
+    return { success: false, message: "دسته بندی مورد نظر یافت نشد" };
+  }
+
+  let articleData: any = {
+    title: data.title || "مقاله بدون عنوان",
+    content: data.content,
+    categoryId: categoryId,
+    published: data.status === "published" ? new Date() : null,
+  };
+  if (data.excerpt !== undefined) articleData.excerpt = data.excerpt;
+  if (data.image !== undefined) articleData.image = data.image;
+
+  if (data.id) {
+    const article = await prisma.article.findUnique({ where: { id: data.id } });
+    if (!article) return { success: false, message: "مقاله مورد نظر یافت نشد" };
+    if (article.authorId !== session.user.id)
+      return {
+        success: false,
+        message: "شما میتوانید فقط مقالات خود را ویرایش کنید",
+      };
+
+    const updatedArticle = await prisma.article.update({
+      where: { id: data.id },
+      data: articleData,
+    });
+
+    revalidatePath("/articles");
+    return {
+      success: true,
+      message: "مقاله با موفقیت ویرایش شد",
+      article: updatedArticle,
     };
-    if (data.excerpt !== undefined) articleData.excerpt = data.excerpt;
-    if (data.image !== undefined) articleData.image = data.image;
+  } else {
+    let slug = data.slug;
+    if (!slug) {
+      const baseSlug = data.title
+        ? slugify(data.title, { lower: true })
+        : `article-${Date.now()}`;
 
-    if (data.id) {
-      const article = await prisma.article.findUnique({ where: { id: data.id } });
-      if (!article) throw new Error("Article not found");
-      if (article.authorId !== session.user.id) throw new Error("Unauthorized");
-
-      const updatedArticle = await prisma.article.update({
-        where: { id: data.id },
-        data: articleData,
-      });
-
-      revalidatePath("/articles");
-      return updatedArticle;
-    } else {
-      let slug = data.slug;
-      if (!slug) {
-        const baseSlug = data.title ? slugify(data.title, { lower: true }) : `article-${Date.now()}`;
-
-        let uniqueSlug = baseSlug;
-        for (let i = 0; i < 5; i++) {
-          const existing = await prisma.article.findUnique({ where: { slug: uniqueSlug } });
-          if (!existing) break;
-          uniqueSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
-        }
-        slug = uniqueSlug;
+      let uniqueSlug = baseSlug;
+      for (let i = 0; i < 5; i++) {
+        const existing = await prisma.article.findUnique({
+          where: { slug: uniqueSlug },
+        });
+        if (!existing) break;
+        uniqueSlug = `${baseSlug}-${Math.random()
+          .toString(36)
+          .substring(2, 8)}`;
       }
-
-      const newArticle = await prisma.article.create({
-        data: {
-          ...articleData,
-          slug,
-          authorId: session.user.id,
-        },
-      });
-
-      revalidatePath("/articles");
-      return newArticle;
+      slug = uniqueSlug;
     }
-  } catch (error) {
-    console.error("Error in createOrUpdateArticle:", error);
-    throw error;
+
+    const newArticle = await prisma.article.create({
+      data: {
+        ...articleData,
+        slug,
+        authorId: session.user.id,
+      },
+    });
+
+    revalidatePath("/articles");
+    return {
+      success: true,
+      message: "مقاله با موفقیت ایجاد شد",
+      article: newArticle,
+    };
   }
 }

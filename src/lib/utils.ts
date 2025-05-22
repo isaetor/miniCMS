@@ -38,8 +38,20 @@ export function formatCommentDate(date: Date | string) {
 }
 
 export function formatAuthorName(firstName: string | null, lastName: string | null) {
-  if (!firstName && !lastName) return "ناشناس"
+  if (!firstName && !lastName) return "کابر مقالیتو"
   return `${firstName || ""} ${lastName || ""}`.trim()
+}
+
+export function formatContent(content: string): string {
+  return content
+    .split('\n')
+    .map(paragraph => {
+      if (paragraph.trim() === '') {
+        return '<br />';
+      }
+      return `<p>${paragraph}</p>`;
+    })
+    .join('');
 }
 
 export { slugify }
